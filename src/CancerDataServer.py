@@ -6,6 +6,12 @@ from tqdm import tqdm
 import sys
 
 
+
+VAF_MIN = 0
+VAF_MAX = 0.5
+VAF_STEP = 0.2
+VAF_THRESHOLDS = list(np.arange(VAF_MIN,VAF_MAX+VAF_STEP,VAF_STEP))
+
 class MetaData(NamedTuple):
     """ container for cancer server info"""
     tissue:str
@@ -92,10 +98,10 @@ class CancerDataServer:
 
 
 
-
 if __name__ == '__main__':
     g = CancerDataServer('brca','all')
     g.fit_from_vaf_thresh_list(VAF_THRESHOLDS)
+
     # for t in VAF_THRESHOLDS:
     #     tt = g.get_binarized_mutations(t)
     #     print(tt.head())

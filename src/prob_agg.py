@@ -7,20 +7,11 @@ import random
 import math
 import sys
 
-def compute_tv_vector(model:BayesianNetwork)->np.array:
-    """ Extended BN to Extended BN"""
-    # print(model.nodes)
-    if len(model.nodes) > 20:
-        all_events = sample_binary_events(model.nodes)
-    else:
-        all_events = pd.DataFrame(data=np.array(list(map(list, itertools.product([0, 1],
-        repeat=len(model.nodes))))),columns = model.nodes)
 
-    results = []
-    for i,r in all_events.iterrows():
-        res = get_event_probability(model,r.to_dict())
-        results.append(res)
-    return np.array(results)
+
+def probabilistic_agony(D1:BayesNet,D2:BayesNet,alpha:float)->float:
+    U = compute_union_graph(D1.get_nx_graph(),D2.get_nx_graph())
+    TV = np.linalg.norm(D1.get_tv_vector()-D2.get_tv_vector(),1)
 
 def compute_union_graph(G1:nx.DiGraph,G2:nx.DiGraph)->nx.DiGraph:
     U = nx.DiGraph()
@@ -30,7 +21,7 @@ def compute_union_graph(G1:nx.DiGraph,G2:nx.DiGraph)->nx.DiGraph:
         U.add_edge(edge[0],edge[1])
     return U
 
-def graph_agony(graph:nx.DiGraph)->int:
+def graph_agony(graph:nx.DiGraph,normalze:str='edge')->int:
 
     # use this as example and to understand the code
     # https://cvxopt.org/userguide/coneprog.html#cvxopt.solvers.lp

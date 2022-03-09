@@ -7,7 +7,7 @@ import networkx as nx
 from pgmpy.models import BayesianNetwork
 from pgmpy.estimators import HillClimbSearch,BDeuScore, K2Score, BicScore
 import ioutils as io
-from BayesianNetwork import ExtendedBN
+# from BayesianNetwork import ExtendedBN
 
 def consolidate_cancer(mutation_info:pd.DataFrame)->Tuple[List[str],List[str]]:
 

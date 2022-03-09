@@ -17,7 +17,7 @@ def compute_and_write_vaf(
         't_alt_count',
         'Tumor_Sample_Barcode',
         'Mutation_Status']]
-    print(cancer)
+        print(cancer)
     print(len(pd.unique(dataset['Tumor_Sample_Barcode'])))
     dataset['VAF'] = dataset['t_alt_count']*1.0/(dataset['t_ref_count']+dataset['t_alt_count'])
     dataset.to_csv("../data/{c}/preprocessed/mutation_vaf.csv".format(c=cancer),index=False)

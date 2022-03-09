@@ -1,33 +1,12 @@
-from pgmpy.models import BayesianNetwork
-import argparse
 import os
-import argparse
 import pandas as pd
 import sys
 import networkx as nx
-import matplotlib.pyplot as plt
-import random
-import seaborn as sns
-from typing import List, Tuple
+from typing import List, Tuple, Union
 import numpy as np
-from prob_agg import compute_union_graph, graph_agony
 import itertools
 from pgmpy.models import BayesianNetwork
 from pgmpy.estimators import HillClimbSearch,BDeuScore, K2Score, BicScore
-import ioutils as io
-import tronco_utils as tu
-import networkutils as nu
-from pgmpy.models import BayesianNetwork
-import pandas as pd
-import itertools
-import os
-# authors @ abhinav tamaskar and james bannon
-import cvxopt as cx
-import networkx as nx
-import numpy as np
-import random
-import math
-import sys
 
 
 class ExtendedBN(BayesianNetwork):
@@ -36,7 +15,27 @@ class ExtendedBN(BayesianNetwork):
         and a label dictionary
     """
     def __init__(self,edge_list:str,mutations:str):
+        self.fit=False
+        self.node_labeling = {}
+        self.numeric_nx_graph = None
+        self.model = None
+
+
+    @classmethod
+    def fit_as_sbcn(cls,df:pd.DataFrame,edge_file_name:Union[str,None])->None:
+        fname = "../swapspace/mutations.csv"
+        data.to_csv(fname)
+        os.system("Rscript fit_sbcn.r {fn}".format(fn=fname))
+
+        SBCN = bu.make_pgm("../swapspace/edge_list.txt",fname)
+        NX = bu.read_edge_list_to_nx_graph("../swapspace/edge_list_numeric.txt")
+
+        os.remove(fname)
+        os.remove("../swapspace/sbcn_info.txt")
+        os.remove("../swapspace/edge_list.txt")
+        os.remove("../swapspace/edge_list_numeric.txt")
         pass
+
 
     def make_pgm(edge_list:str,mutations:str)->BayesianNetwork:
         mutation_data = pd.read_csv(mutations,index_col=0).reset_index(drop=True)
@@ -52,25 +51,17 @@ class ExtendedBN(BayesianNetwork):
         model.fit(mutation_data)
         return model
 
-
-    def get_event_probability(model,evidence:dict)-> float:
-        log_sum = 0
-        # print("event probs")
-        nodes = model.nodes()
-        for node in nodes:
-            cpd = model.get_cpds(node)
-            vals = cpd.get_values()
-            parents = model.get_parents(node)
-            if len(parents)>=1:
-                cpd_=cpd.reduce([(node,evidence[node]) for node in parents],inplace=False)
-                vals = cpd_.get_values()
-            log_sum += np.log(vals[evidence[node]][0])
-        return np.exp(log_sum)
+    @classmethod
+    def fit_as_bn(cls,mutation_data:pd.DataFrame)->None:
+        model = HillClimbSearch(mutation_data)
+        model = model.estimate(scoring_method=BicScore(mutation_data))
+        model = BayesianNetwork(model)
+        model.fit(mutation_data)
+        self.model = model
 
 
-    def compute_tv_vector(model:BayesianNetwork)->np.array:
-        # print(model.nodes)
-        if len(model.nodes) > 20:
+    def compute_tv_vector(self)->np.array:
+        if len(self.model.nodes) > 20:
             all_events = sample_binary_events(model.nodes)
         else:
             all_events = pd.DataFrame(data=np.array(list(map(list, itertools.product([0, 1],
@@ -78,9 +69,10 @@ class ExtendedBN(BayesianNetwork):
 
         results = []
         for i,r in all_events.iterrows():
-            res = get_event_probability(model,r.to_dict())
+            res = self.get_event_probability(model,r.to_dict())
             results.append(res)
         return np.array(results)
+
 
     def get_event_probability(model,evidence:dict)-> float:
         log_sum = 0
@@ -96,19 +88,6 @@ class ExtendedBN(BayesianNetwork):
             log_sum += np.log(vals[evidence[node]][0])
         return np.exp(log_sum)
 
-    #TODO: make sure it allows passsing in `all' as an argument
-    def fit_bayesnet(mutations:pd.DataFrame,fname:str) ->None:
-        print("***fitting bn***")
-        print(fname)
-
-        model = HillClimbSearch(mutations)
-        model = model.estimate(scoring_method=BicScore(mutations))
-        model = BayesianNetwork(model)
-        model.fit(mutations)
-        nx.draw(model, with_labels=True)
-        plt.savefig(fname)
-        plt.close()
-        return model
 
     def read_edge_list_to_nx_graph(edge_list:str)->nx.DiGraph:
         D=nx.DiGraph()
