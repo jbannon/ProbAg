@@ -55,7 +55,7 @@ write_edge_list = function(annotations, adj_mat,fit,cancer,group){
 
 
 fit_sbcn = function(dataset){
-  meta_info = scan("../swapspace/sbcn_info.txt", character(), quote = "")
+  # meta_info = scan("../swapspace/sbcn_info.txt", character(), quote = "")
   select_max = T
   model = import.genotypes(dataset)
 
@@ -84,13 +84,8 @@ fit_sbcn = function(dataset){
 }
 
 
-
-
   write_edge_list(gene_list, adj_mat,fit,meta_info[2],meta_info[3])
 
-  # pdf(file=paste0(opath,"/tronco_sbcn.pdf"))
-  # tronco.plot(model.fit,disconnected=TRUE)
-  # dev.off()
 }
 
 

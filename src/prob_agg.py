@@ -9,9 +9,11 @@ import sys
 
 
 
-def probabilistic_agony(D1:BayesNet,D2:BayesNet,alpha:float)->float:
+def probabilistic_agony(D1:BayesNet,D2:BayesNet,alpha:float=0.5)->float:
     U = compute_union_graph(D1.get_nx_graph(),D2.get_nx_graph())
+    Ag = graph_agony(U)
     TV = np.linalg.norm(D1.get_tv_vector()-D2.get_tv_vector(),1)
+    return Ag,Tv, (1-alpha)*Ag + alpha*TV
 
 def compute_union_graph(G1:nx.DiGraph,G2:nx.DiGraph)->nx.DiGraph:
     U = nx.DiGraph()

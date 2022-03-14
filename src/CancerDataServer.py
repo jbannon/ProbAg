@@ -41,6 +41,7 @@ class CancerDataServer:
             self.binarize(t)
 
     def binarize(self,thresh:float):
+        print("Binarzing Mutations")
         if thresh in self.vaf_to_binary_df.keys():
             return self.vaf_to_binary_df[thresh]
         else:

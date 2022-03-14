@@ -7,49 +7,63 @@ import numpy as np
 import itertools
 from pgmpy.models import BayesianNetwork
 from pgmpy.estimators import HillClimbSearch,BDeuScore, K2Score, BicScore
+from CancerDataServer import CancerDataServer
 
-
-class ExtendedBN(BayesianNetwork):
+class ExtendedBN:
     """
-        Extends BayesianNetwork Class to include a numbered networkx graph
-        and a label dictionary
+        Extends BayesianNetwork Class to include a
+        numbered networkx graph and a label dictionary
     """
-    def __init__(self,edge_list:str,mutations:str):
+    def __init__(self):
         self.fit=False
-        self.node_labeling = {}
-        self.numeric_nx_graph = None
-        self.model = None
 
+    def get_tv_vector(self)->np.array:
+        if self.TV_vect is None:
+            self.TV_vect = self.compute_tv_vector()
+        return self.TV_vect
 
-    @classmethod
-    def fit_as_sbcn(cls,df:pd.DataFrame,edge_file_name:Union[str,None])->None:
+    def fit_as_sbcn(self,data:pd.DataFrame)->None:
         fname = "../swapspace/mutations.csv"
         data.to_csv(fname)
+
         os.system("Rscript fit_sbcn.r {fn}".format(fn=fname))
 
+        self.make_name_maps("../swapspace/node_numbering.txt")
+        nodes = list(mutation_data.columns)
+        model = BayesianNetwork()
+        model.add_nodes_from(nodes)
+        
+        nodes = list(data.columns)
+        model = BayesianNetwork()
+        model.add_nodes_from(nodes)
+        with open(edge_list, "r") as f:
+            lines = f.readlines()
+            lines = [line.rstrip() for line in lines]
+            for edge in lines[3:]:
+                edge=edge.split()
+                model.add_edge(edge[0],edge[1])
+        model.fit(mutation_data)
         SBCN = bu.make_pgm("../swapspace/edge_list.txt",fname)
         NX = bu.read_edge_list_to_nx_graph("../swapspace/edge_list_numeric.txt")
 
         os.remove(fname)
-        os.remove("../swapspace/sbcn_info.txt")
         os.remove("../swapspace/edge_list.txt")
         os.remove("../swapspace/edge_list_numeric.txt")
-        pass
+        return cls(True)
 
+    def make_name_maps(self,fname:str):
+        gene_2_idx, idx_2_gene = {},{}
 
-    def make_pgm(edge_list:str,mutations:str)->BayesianNetwork:
-        mutation_data = pd.read_csv(mutations,index_col=0).reset_index(drop=True)
-        nodes = list(mutation_data.columns)
-        model = BayesianNetwork()
-        model.add_nodes_from(nodes)
-        f = open(edge_list, "r")
-        lines = f.readlines()
-        lines = [line.rstrip() for line in lines]
-        for edge in lines[3:]:
-            edge=edge.split()
-            model.add_edge(edge[0],edge[1])
-        model.fit(mutation_data)
-        return model
+        with open("../swapspace/node_numbering.txt","r") as f:
+            lines = f.readlines()
+            lines = [line.rstrip() for line in lines]
+            for line in lines:
+                gene, idx = line.split()
+                gene_2_idx[gene] = idx
+                idx_2_gene[idx] = gene
+        self.gene_2_idx = gene_2_idx
+        self.idx_2_gene = idx_2_gene
+
 
     @classmethod
     def fit_as_bn(cls,mutation_data:pd.DataFrame)->None:
@@ -58,6 +72,7 @@ class ExtendedBN(BayesianNetwork):
         model = BayesianNetwork(model)
         model.fit(mutation_data)
         self.model = model
+        self.fit = True
 
 
     def compute_tv_vector(self)->np.array:
@@ -104,3 +119,15 @@ class ExtendedBN(BayesianNetwork):
             edge= edge.split()
             D.add_edge(int(edge[0]),int(edge[1]))
         return D
+
+if __name__ == '__main__':
+    cancer = 'brca'
+    vts = [0.1,0.2]
+    S = CancerDataServer(cancer)
+    S.fit_from_vaf_thresh_list(vts)
+    for vt in vts:
+        df = S.get_binarized_mutations(vt)
+        df = df.iloc[:,:10]
+        # print(df.head())
+        # sys.exit(1)
+        BN = ExtendedBN().fit_as_sbcn(df)
