@@ -29,27 +29,18 @@ class ExtendedBN:
         os.system("Rscript fit_sbcn.r {fn}".format(fn=fname))
 
         self.make_name_maps("../swapspace/node_numbering.txt")
-        nodes = list(mutation_data.columns)
-        model = BayesianNetwork()
-        model.add_nodes_from(nodes)
-        
+
         nodes = list(data.columns)
         model = BayesianNetwork()
         model.add_nodes_from(nodes)
-        with open(edge_list, "r") as f:
-            lines = f.readlines()
-            lines = [line.rstrip() for line in lines]
-            for edge in lines[3:]:
-                edge=edge.split()
-                model.add_edge(edge[0],edge[1])
-        model.fit(mutation_data)
-        SBCN = bu.make_pgm("../swapspace/edge_list.txt",fname)
-        NX = bu.read_edge_list_to_nx_graph("../swapspace/edge_list_numeric.txt")
+        model.fit(data)
+        self.model = model
+        self.read_edge_list_to_nx_graph("../swapspace/edge_list_numeric.txt")
 
         os.remove(fname)
         os.remove("../swapspace/edge_list.txt")
         os.remove("../swapspace/edge_list_numeric.txt")
-        return cls(True)
+
 
     def make_name_maps(self,fname:str):
         gene_2_idx, idx_2_gene = {},{}
@@ -74,6 +65,9 @@ class ExtendedBN:
         self.model = model
         self.fit = True
 
+    def _echo_maps(self):
+        print(self.gene_2_idx)
+        print(self.idx_2_gene)
 
     def compute_tv_vector(self)->np.array:
         if len(self.model.nodes) > 20:
@@ -103,22 +97,24 @@ class ExtendedBN:
             log_sum += np.log(vals[evidence[node]][0])
         return np.exp(log_sum)
 
+    def get_nx_graph(self)->nx.DiGraph:
+        return self.nx_graph
 
-    def read_edge_list_to_nx_graph(edge_list:str)->nx.DiGraph:
+    def read_edge_list_to_nx_graph(self,edge_list:str)->None:
         D=nx.DiGraph()
-        f = open(edge_list, "r")
-        lines = f.readlines()
-        lines = [line.rstrip() for line in lines]
+        print(edge_list)
+        with open(edge_list, "r") as f:
+            lines = f.readlines()
+            lines = [line.rstrip() for line in lines]
         num_nodes = lines[2]
         for j in range(0,int(num_nodes)):
             D.add_node(j)
         num_edges = lines[1]
         edges = lines[3:]
         for edge in edges:
-            # print(edge)
             edge= edge.split()
             D.add_edge(int(edge[0]),int(edge[1]))
-        return D
+        self.nx_graph = D
 
 if __name__ == '__main__':
     cancer = 'brca'
@@ -128,6 +124,8 @@ if __name__ == '__main__':
     for vt in vts:
         df = S.get_binarized_mutations(vt)
         df = df.iloc[:,:10]
-        # print(df.head())
-        # sys.exit(1)
-        BN = ExtendedBN().fit_as_sbcn(df)
+        BN = ExtendedBN()
+        BN.fit_as_sbcn(df)
+        G = BN.get_nx_graph()
+        print(G)
+        BN._echo_maps()

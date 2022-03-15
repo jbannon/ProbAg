@@ -18,32 +18,39 @@ create_dictionary_from_annotations = function(annotations){
 }
 
 write_edge_list = function(annotations, adj_mat,fit,cancer,group){
+  print("writing edge list")
  if (!file.exists("../swapspace/node_numbering.txt")){
   create_dictionary_from_annotations(annotations)
  }
+
   gene_id_map = read.delim(file = "../swapspace/node_numbering.txt", header = TRUE, sep = "\t", dec = ".")
   n_nodes = dim(annotations)[1]
   edge_list_numeric = c()
   edge_list = c()
   edge_count = 0
 
-
+  print(annotations)
+  print(annotations[1,"event"])
+  print(rownames(adj_mat)[1])
+  print(annotations[rownames(adj_mat)[1],"event"])
   for(i in 1:dim(adj_mat)[1]){
     for(j in 1:dim(adj_mat)[2]){
       if(adj_mat[i,j]==1){
         edge_count = edge_count+1
-     src = annotations[rownames(adj_mat)[i],"event"]
-     src_num = gene_id_map[,"num"][which(gene_id_map["gene"]==src)]
-     dst = annotations[colnames(adj_mat)[j],"event"]
-     dst_num = gene_id_map[,"num"][which(gene_id_map["gene"]==dst)]
-
-     edge_list = c(edge_list,paste0(src,"\t",dst))
-     edge_list_numeric = c(edge_list_numeric,paste0(src_num,"\t",dst_num))
+        src = annotations[rownames(adj_mat)[i],"event"]
+        src_num = gene_id_map[,"num"][which(gene_id_map["gene"]==src)]
+        dst = annotations[colnames(adj_mat)[j],"event"]
+        dst_num = gene_id_map[,"num"][which(gene_id_map["gene"]==dst)]
+        print(src)
+        print(dst)
+        edge_list = c(edge_list,paste0(src,"\t",dst))
+        edge_list_numeric = c(edge_list_numeric,paste0(src_num,"\t",dst_num))
    }
    }
   }
   edge_list = c(fit,edge_count,n_nodes,edge_list)
   edge_list_numeric = c(fit,edge_count,n_nodes,edge_list_numeric)
+  print(edge_list_numeric)
   fileConn <- file(paste0("../swapspace/edge_list.txt"))
   writeLines(edge_list, fileConn)
   close(fileConn)
@@ -56,13 +63,14 @@ write_edge_list = function(annotations, adj_mat,fit,cancer,group){
 
 fit_sbcn = function(dataset){
   # meta_info = scan("../swapspace/sbcn_info.txt", character(), quote = "")
-  select_max = T
+  select_max = F
   model = import.genotypes(dataset)
 
   model.fit = tronco.capri(model,boot.seed = 12345, nboot = 5,silent=T,pvalue=0.5)
   gene_list = model.fit$annotations
-
+  print(gene_list)
   if(select_max){
+    fit="max"
     n=nrow(model.fit$model$capri_aic$adj.matrix$adj.matrix.fit)
     adj_mat = matrix(0,n,n)
     aic =model.fit$model$capri_aic$adj.matrix$adj.matrix.fit
@@ -82,8 +90,7 @@ fit_sbcn = function(dataset){
     fit = "bic"
   }
 }
-
-
+  
   write_edge_list(gene_list, adj_mat,fit,meta_info[2],meta_info[3])
 
 }
